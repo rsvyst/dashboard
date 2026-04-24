@@ -4,14 +4,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Звіт по товарних залишках</title>
+  <title>Дашборд Melofone</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root { --bg:#f6f7fb; --card:#fff; --text:#111827; --muted:#6b7280; --border:#e5e7eb; --accent:#2563eb; --accent-soft:#dbeafe; --ok-soft:#dcfce7; --ok:#166534; --warn-soft:#fef3c7; --warn:#92400e; }
     *{box-sizing:border-box} body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--text)}
-    .page{max-width:1500px;margin:0 auto;padding:24px}.header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:24px}
+    .page{max-width:1500px;margin:0 auto;padding:24px}.header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px}
     h1{margin:0 0 8px;font-size:30px;line-height:1.2}.subtitle{margin:0;color:var(--muted);font-size:14px}
     .refresh{border:0;background:var(--accent);color:white;padding:10px 16px;border-radius:12px;cursor:pointer;font-weight:600}
+    .tabs{display:flex;gap:10px;margin:0 0 20px;flex-wrap:wrap}
+    .tab-btn{border:1px solid var(--border);background:#fff;color:var(--text);padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:700}
+    .tab-btn.active{background:var(--accent);color:white;border-color:var(--accent)}
+    .tab-content{display:none}.tab-content.active{display:block}
+    .section-title{font-size:22px;margin:0 0 14px}
     .cards{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:16px;margin-bottom:20px}
     .card,.panel{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:0 8px 24px rgba(15,23,42,.04)}
     .card{padding:18px}.card-title{color:var(--muted);font-size:13px;margin-bottom:10px}.card-value{font-size:30px;font-weight:800}
@@ -21,7 +26,7 @@
     th{background:#f9fafb;color:#374151;font-weight:700;position:sticky;top:0;z-index:1}.table-wrap{max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:14px}
     .badge,.ok,.warn{display:inline-flex;padding:4px 9px;border-radius:999px;font-weight:700;font-size:12px;margin:1px}.badge{background:var(--accent-soft);color:#1d4ed8}.ok{background:var(--ok-soft);color:var(--ok)}.warn{background:var(--warn-soft);color:var(--warn)}
     .status{margin-top:12px;color:var(--muted);font-size:13px}
-    .muted{color:var(--muted)}
+    .placeholder{padding:32px;border:1px dashed var(--border);border-radius:18px;background:#fff;color:var(--muted);font-size:15px}
     @media(max-width:1100px){.cards{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.filters{grid-template-columns:1fr 1fr}.header{flex-direction:column}}
     @media(max-width:640px){.page{padding:14px}.cards,.filters{grid-template-columns:1fr}h1{font-size:24px}}
   </style>
@@ -30,60 +35,79 @@
 <main class="page">
   <section class="header">
     <div>
-      <h1>Звіт по товарних залишках</h1>
-      <p class="subtitle">Пріоритет обліку IMEI: Офіс → Фабрика → Транзит UA → Транзит PL. Продані IMEI не відображаються.</p>
+      <h1>Дашборд Melofone</h1>
+      <p class="subtitle">Єдиний дашборд для залишків, замовлень та майбутньої аналітики продажів.</p>
     </div>
     <button class="refresh" onclick="loadDashboard()">Оновити дані</button>
   </section>
 
-  <section class="cards">
-    <div class="card"><div class="card-title">Всього в залишку</div><div class="card-value" id="totalCount">—</div></div>
-    <div class="card"><div class="card-title">Склад Офіс</div><div class="card-value" id="officeCount">—</div></div>
-    <div class="card"><div class="card-title">Склад Фабрика</div><div class="card-value" id="factoryCount">—</div></div>
-    <div class="card"><div class="card-title">Транзит UA</div><div class="card-value" id="uaCount">—</div></div>
-    <div class="card"><div class="card-title">Транзит PL</div><div class="card-value" id="plCount">—</div></div>
-  </section>
+  <nav class="tabs">
+    <button class="tab-btn active" onclick="switchTab('stock', this)">Звіт по товарних залишках</button>
+    <button class="tab-btn" onclick="switchTab('sales', this)">Продажі</button>
+  </nav>
 
-  <section class="panel">
-    <h2>Замовлення клієнтів: наявність та докупка</h2>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Модель</th><th>Памʼять</th><th>Потрібно</th><th>Є всього</th><th>Де є</th><th>Купити</th><th>Статус</th></tr></thead>
-        <tbody id="orderBody"></tbody>
-      </table>
-    </div>
-    <div class="status" id="orderStatus">Завантаження замовлень...</div>
-  </section>
+  <section id="stockTab" class="tab-content active">
+    <h2 class="section-title">Звіт по товарних залишках</h2>
 
-  <section class="grid">
-    <div class="panel"><h2>Розподіл по складах</h2><canvas id="warehouseChart"></canvas></div>
-    <div class="panel">
-      <h2>Топ моделей у залишку</h2>
+    <section class="cards">
+      <div class="card"><div class="card-title">Всього в залишку</div><div class="card-value" id="totalCount">—</div></div>
+      <div class="card"><div class="card-title">Склад Офіс</div><div class="card-value" id="officeCount">—</div></div>
+      <div class="card"><div class="card-title">Склад Фабрика</div><div class="card-value" id="factoryCount">—</div></div>
+      <div class="card"><div class="card-title">Транзит UA</div><div class="card-value" id="uaCount">—</div></div>
+      <div class="card"><div class="card-title">Транзит PL</div><div class="card-value" id="plCount">—</div></div>
+    </section>
+
+    <section class="panel">
+      <h2>Замовлення клієнтів: наявність та докупка</h2>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Модель</th><th>Памʼять</th><th>Кількість</th><th>Склади</th></tr></thead>
-          <tbody id="topModelsBody"></tbody>
+          <thead><tr><th>Модель</th><th>Памʼять</th><th>Потрібно</th><th>Є всього</th><th>Де є</th><th>Купити</th><th>Статус</th></tr></thead>
+          <tbody id="orderBody"></tbody>
         </table>
       </div>
-    </div>
+      <div class="status" id="orderStatus">Завантаження замовлень...</div>
+    </section>
+
+    <section class="grid">
+      <div class="panel"><h2>Розподіл по складах</h2><canvas id="warehouseChart"></canvas></div>
+      <div class="panel">
+        <h2>Топ моделей у залишку</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Модель</th><th>Памʼять</th><th>Кількість</th><th>Склади</th></tr></thead>
+            <tbody id="topModelsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Деталізація залишків</h2>
+      <div class="filters">
+        <input id="searchInput" placeholder="Пошук: IMEI або модель" oninput="renderTable()" />
+        <select id="warehouseFilter" onchange="renderTable()"><option value="">Усі склади</option></select>
+        <select id="nameFilter" onchange="renderTable()"><option value="">Усі моделі</option></select>
+        <select id="memoryFilter" onchange="renderTable()"><option value="">Уся памʼять</option></select>
+        <select id="gradeFilter" onchange="renderTable()"><option value="">Усі Grade</option></select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>IMEI</th><th>Модель</th><th>Памʼять</th><th>Grade</th><th>Склад</th></tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="status" id="statusText">Завантаження...</div>
+    </section>
   </section>
 
-  <section class="panel">
-    <h2>Деталізація залишків</h2>
-    <div class="filters">
-      <input id="searchInput" placeholder="Пошук: IMEI або модель" oninput="renderTable()" />
-      <select id="warehouseFilter" onchange="renderTable()"><option value="">Усі склади</option></select>
-      <select id="nameFilter" onchange="renderTable()"><option value="">Усі моделі</option></select>
-      <select id="memoryFilter" onchange="renderTable()"><option value="">Уся памʼять</option></select>
-      <select id="gradeFilter" onchange="renderTable()"><option value="">Усі Grade</option></select>
+  <section id="salesTab" class="tab-content">
+    <h2 class="section-title">Продажі</h2>
+    <div class="panel">
+      <h2>Дашборд продажів</h2>
+      <div class="placeholder">
+        Тут буде аналітика продажів. Цю вкладку вже підготовлено для наступного блоку: продажі по днях, моделях, маржі, каналах та менеджерах.
+      </div>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>IMEI</th><th>Модель</th><th>Памʼять</th><th>Grade</th><th>Склад</th></tr></thead>
-        <tbody id="tableBody"></tbody>
-      </table>
-    </div>
-    <div class="status" id="statusText">Завантаження...</div>
   </section>
 </main>
 <script>
@@ -97,6 +121,14 @@ const sources = [
 const salesSheet = { sheet:"Продажи", imeiColumnIndex:0 };
 const orderSheet = { sheet:"Заказ", name:0, memory:1 };
 let allItems=[], orderItems=[], soldExcludedCount=0, warehouseChart;
+
+function switchTab(tab, button){
+  document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(content => content.classList.remove("active"));
+  button.classList.add("active");
+  document.getElementById(tab + "Tab").classList.add("active");
+}
+
 function csvUrl(sheetName){ return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`; }
 function parseCSV(text){ const rows=[]; let row=[], value="", q=false; for(let i=0;i<text.length;i++){ const c=text[i], n=text[i+1]; if(c=='"'&&q&&n=='"'){value+='"';i++;} else if(c=='"'){q=!q;} else if(c==","&&!q){row.push(value);value="";} else if((c=="\n"||c=="\r")&&!q){ if(value||row.length){row.push(value);rows.push(row);row=[];value="";} if(c=="\r"&&n=="\n")i++;} else value+=c;} if(value||row.length){row.push(value);rows.push(row);} return rows; }
 function clean(v){ return String(v||"").trim(); }
