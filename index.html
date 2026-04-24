@@ -1,10 +1,10 @@
 
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="uk">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Отчет по товарным остаткам</title>
+  <title>Звіт по товарних залишках</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root { --bg:#f6f7fb; --card:#fff; --text:#111827; --muted:#6b7280; --border:#e5e7eb; --accent:#2563eb; --accent-soft:#dbeafe; --ok-soft:#dcfce7; --ok:#166534; --warn-soft:#fef3c7; --warn:#92400e; }
@@ -12,67 +12,91 @@
     .page{max-width:1500px;margin:0 auto;padding:24px}.header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:24px}
     h1{margin:0 0 8px;font-size:30px;line-height:1.2}.subtitle{margin:0;color:var(--muted);font-size:14px}
     .refresh{border:0;background:var(--accent);color:white;padding:10px 16px;border-radius:12px;cursor:pointer;font-weight:600}
-    .cards{display:grid;grid-template-columns:repeat(6,minmax(130px,1fr));gap:16px;margin-bottom:20px}
+    .cards{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:16px;margin-bottom:20px}
     .card,.panel{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:0 8px 24px rgba(15,23,42,.04)}
     .card{padding:18px}.card-title{color:var(--muted);font-size:13px;margin-bottom:10px}.card-value{font-size:30px;font-weight:800}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}.panel{padding:18px;min-height:300px;margin-bottom:20px}.panel h2{margin:0 0 16px;font-size:18px}
+    .grid{display:grid;grid-template-columns:1fr 1.4fr;gap:16px;margin-bottom:20px}.panel{padding:18px;min-height:300px;margin-bottom:20px}.panel h2{margin:0 0 16px;font-size:18px}
     .filters{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px} input,select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:white;font-size:14px}
-    table{width:100%;border-collapse:collapse;background:white;border-radius:14px;overflow:hidden} th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--border);font-size:13px;white-space:nowrap}
+    table{width:100%;border-collapse:collapse;background:white;border-radius:14px;overflow:hidden} th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--border);font-size:13px;white-space:nowrap;vertical-align:top}
     th{background:#f9fafb;color:#374151;font-weight:700;position:sticky;top:0;z-index:1}.table-wrap{max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:14px}
-    .badge,.ok,.warn{display:inline-flex;padding:4px 9px;border-radius:999px;font-weight:700;font-size:12px}.badge{background:var(--accent-soft);color:#1d4ed8}.ok{background:var(--ok-soft);color:var(--ok)}.warn{background:var(--warn-soft);color:var(--warn)}
+    .badge,.ok,.warn{display:inline-flex;padding:4px 9px;border-radius:999px;font-weight:700;font-size:12px;margin:1px}.badge{background:var(--accent-soft);color:#1d4ed8}.ok{background:var(--ok-soft);color:var(--ok)}.warn{background:var(--warn-soft);color:var(--warn)}
     .status{margin-top:12px;color:var(--muted);font-size:13px}
-    @media(max-width:1100px){.cards{grid-template-columns:repeat(3,1fr)}.grid{grid-template-columns:1fr}.filters{grid-template-columns:1fr 1fr}.header{flex-direction:column}}
+    @media(max-width:1100px){.cards{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.filters{grid-template-columns:1fr 1fr}.header{flex-direction:column}}
     @media(max-width:640px){.page{padding:14px}.cards,.filters{grid-template-columns:1fr}h1{font-size:24px}}
   </style>
 </head>
 <body>
 <main class="page">
-  <section class="header"><div><h1>Отчет по товарным остаткам</h1><p class="subtitle">Офіс → Фабрика → Транзит UA → Транзит PL. Продажи исключаются. Заказы сравниваются с остатком.</p></div><button class="refresh" onclick="loadDashboard()">Обновить данные</button></section>
+  <section class="header">
+    <div>
+      <h1>Звіт по товарних залишках</h1>
+      <p class="subtitle">Пріоритет обліку IMEI: Офіс → Фабрика → Транзит UA → Транзит PL. Продані IMEI не відображаються.</p>
+    </div>
+    <button class="refresh" onclick="loadDashboard()">Оновити дані</button>
+  </section>
   <section class="cards">
-    <div class="card"><div class="card-title">Всего в остатке</div><div class="card-value" id="totalCount">—</div></div>
+    <div class="card"><div class="card-title">Всього в залишку</div><div class="card-value" id="totalCount">—</div></div>
     <div class="card"><div class="card-title">Склад Офіс</div><div class="card-value" id="officeCount">—</div></div>
     <div class="card"><div class="card-title">Склад Фабрика</div><div class="card-value" id="factoryCount">—</div></div>
     <div class="card"><div class="card-title">Транзит UA</div><div class="card-value" id="uaCount">—</div></div>
     <div class="card"><div class="card-title">Транзит PL</div><div class="card-value" id="plCount">—</div></div>
-    <div class="card"><div class="card-title">Исключено продажами</div><div class="card-value" id="soldExcludedCount">—</div></div>
   </section>
-  <section class="panel"><h2>Заказ клиентов: наличие и докупка</h2><div class="table-wrap"><table><thead><tr><th>Модель</th><th>Память</th><th>Нужно</th><th>Есть всего</th><th>Где есть</th><th>Купить</th><th>Статус</th></tr></thead><tbody id="orderBody"></tbody></table></div><div class="status" id="orderStatus">Загрузка заказов...</div></section>
-  <section class="grid"><div class="panel"><h2>Распределение по складам</h2><canvas id="warehouseChart"></canvas></div><div class="panel"><h2>Топ моделей</h2><canvas id="modelChart"></canvas></div></section>
-  <section class="panel"><h2>Детализация остатков</h2><div class="filters"><input id="searchInput" placeholder="Поиск: IMEI или модель" oninput="renderTable()" /><select id="warehouseFilter" onchange="renderTable()"><option value="">Все склады</option></select><select id="nameFilter" onchange="renderTable()"><option value="">Все модели</option></select><select id="memoryFilter" onchange="renderTable()"><option value="">Вся память</option></select><select id="gradeFilter" onchange="renderTable()"><option value="">Все Grade</option></select></div><div class="table-wrap"><table><thead><tr><th>IMEI</th><th>Name 2</th><th>Memory</th><th>Grade</th><th>Статус</th></tr></thead><tbody id="tableBody"></tbody></table></div><div class="status" id="statusText">Загрузка...</div></section>
+  <section class="panel">
+    <h2>Замовлення клієнтів: наявність та докупка</h2>
+    <div class="table-wrap"><table><thead><tr><th>Модель</th><th>Памʼять</th><th>Потрібно</th><th>Є всього</th><th>Де є</th><th>Купити</th><th>Статус</th></tr></thead><tbody id="orderBody"></tbody></table></div>
+    <div class="status" id="orderStatus">Завантаження замовлень...</div>
+  </section>
+  <section class="grid">
+    <div class="panel"><h2>Розподіл по складах</h2><canvas id="warehouseChart"></canvas></div>
+    <div class="panel"><h2>Топ моделей у залишку</h2><div class="table-wrap"><table><thead><tr><th>Модель</th><th>Памʼять</th><th>Кількість</th><th>Grade</th><th>Склади</th></tr></thead><tbody id="topModelsBody"></tbody></table></div></div>
+  </section>
+  <section class="panel">
+    <h2>Деталізація залишків</h2>
+    <div class="filters">
+      <input id="searchInput" placeholder="Пошук: IMEI або модель" oninput="renderTable()" />
+      <select id="warehouseFilter" onchange="renderTable()"><option value="">Усі склади</option></select>
+      <select id="nameFilter" onchange="renderTable()"><option value="">Усі моделі</option></select>
+      <select id="memoryFilter" onchange="renderTable()"><option value="">Уся памʼять</option></select>
+      <select id="gradeFilter" onchange="renderTable()"><option value="">Усі Grade</option></select>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>IMEI</th><th>Модель</th><th>Памʼять</th><th>Grade</th><th>Склад</th></tr></thead><tbody id="tableBody"></tbody></table></div>
+    <div class="status" id="statusText">Завантаження...</div>
+  </section>
 </main>
 <script>
-const SHEET_ID = "1yapR0KITnrjKxKARl_N2eIlDdiR4st6EHFor62abdxk";
-const sources = [
-  { warehouse:"Склад Офіс", sheet:"Склад Офис", map:{ imei:0, name:1, memory:2, grade:3 } },
-  { warehouse:"Склад Фабрика", sheet:"Склад Фабрика", map:{ imei:0, name:4, memory:2, grade:3 } },
-  { warehouse:"Склад Транзит UA", sheet:"Склад Транзит UA", map:{ imei:0, name:2, memory:3, grade:4 } },
-  { warehouse:"Склад Транзит PL", sheet:"Склад Транзит PL", map:{ imei:0, name:3, memory:4, grade:2 } }
+const SHEET_ID="1yapR0KITnrjKxKARl_N2eIlDdiR4st6EHFor62abdxk";
+const sources=[
+  {warehouse:"Склад Офіс",sheet:"Склад Офис",map:{imei:0,name:1,memory:2,grade:3}},
+  {warehouse:"Склад Фабрика",sheet:"Склад Фабрика",map:{imei:0,name:4,memory:2,grade:3}},
+  {warehouse:"Склад Транзит UA",sheet:"Склад Транзит UA",map:{imei:0,name:2,memory:3,grade:4}},
+  {warehouse:"Склад Транзит PL",sheet:"Склад Транзит PL",map:{imei:0,name:3,memory:4,grade:2}}
 ];
-const salesSheet = { sheet:"Продажи", imeiColumnIndex:0 };
-const orderSheet = { sheet:"Заказ", name:0, memory:1 };
-let allItems=[], orderItems=[], soldExcludedCount=0, warehouseChart, modelChart;
-function csvUrl(sheetName){ return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`; }
-function parseCSV(text){ const rows=[]; let row=[], value="", q=false; for(let i=0;i<text.length;i++){ const c=text[i], n=text[i+1]; if(c=='"'&&q&&n=='"'){value+='"';i++;} else if(c=='"'){q=!q;} else if(c==","&&!q){row.push(value);value="";} else if((c=="\n"||c=="\r")&&!q){ if(value||row.length){row.push(value);rows.push(row);row=[];value="";} if(c=="\r"&&n=="\n")i++;} else value+=c;} if(value||row.length){row.push(value);rows.push(row);} return rows; }
-function clean(v){ return String(v||"").trim(); }
-function normalizeImei(v){ return String(v||"").replace(/\s+/g,"").replace(/[^0-9A-Za-z]/g,"").trim(); }
-function normalizeMemory(v){ const raw=clean(v).toUpperCase(); const tb=raw.match(/(\d+)\s*T[B]?/i); if(tb)return tb[1]+"TB"; const gb=raw.match(/(\d+)\s*G[B]?/i); if(gb)return gb[1]+"GB"; return raw; }
-function normalizeGrade(v){ return clean(v).toUpperCase().replace(/^GRADE\s+/i,"").trim(); }
-function normalizeName(v){ return clean(v).replace(/\b\d+\s*G[B]?\b/gi," ").replace(/\b\d+\s*T[B]?\b/gi," ").replace(/\bGrade\s*[A-D]\+?\b/gi," ").replace(/\b[A-D]\+?\s*$/gi," ").replace(/[|•]/g," ").replace(/\s{2,}/g," ").replace(/[\s,;:/\-]+$/g,"").trim(); }
-function keyNameMemory(n,m){ return normalizeName(n).toLowerCase()+"||"+normalizeMemory(m).toLowerCase(); }
-function escapeHtml(v){ return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
-async function fetchRawSheet(sheetName){ const r=await fetch(csvUrl(sheetName)); if(!r.ok) throw new Error("Не удалось загрузить вкладку: "+sheetName); return parseCSV(await r.text()); }
-async function fetchSoldImeis(){ const rows=await fetchRawSheet(salesSheet.sheet); return new Set(rows.slice(1).map(r=>normalizeImei(r[salesSheet.imeiColumnIndex])).filter(Boolean)); }
-async function fetchOrders(){ const rows=await fetchRawSheet(orderSheet.sheet); const grouped=new Map(); rows.slice(1).forEach(r=>{ const name=normalizeName(r[orderSheet.name]); const memory=normalizeMemory(r[orderSheet.memory]); if(!name&&!memory)return; const key=keyNameMemory(name,memory); if(!grouped.has(key))grouped.set(key,{name,memory,qty:0}); grouped.get(key).qty+=1; }); return Array.from(grouped.values()); }
-async function fetchStockSheet(source){ const rows=await fetchRawSheet(source.sheet); return rows.slice(1).map(r=>({ imei:normalizeImei(r[source.map.imei]), name:normalizeName(r[source.map.name]), memory:normalizeMemory(r[source.map.memory]), grade:normalizeGrade(r[source.map.grade]), warehouse:source.warehouse })).filter(i=>i.imei); }
-async function loadDashboard(){ document.getElementById("statusText").textContent="Загрузка данных..."; document.getElementById("orderStatus").textContent="Загрузка заказов..."; try{ const sold=await fetchSoldImeis(); orderItems=await fetchOrders(); const unique=new Map(); let excluded=0; for(const source of sources){ const rows=await fetchStockSheet(source); for(const item of rows){ if(sold.has(item.imei)){excluded++;continue;} if(!unique.has(item.imei)) unique.set(item.imei,item); } } allItems=Array.from(unique.values()); soldExcludedCount=excluded; renderCards(); renderFilters(); renderCharts(); renderTable(); renderOrders(); document.getElementById("statusText").textContent=`Обновлено: ${new Date().toLocaleString("ru-RU")}. В остатке: ${allItems.length}. Исключено по продажам: ${soldExcludedCount}`; }catch(e){ console.error(e); document.getElementById("statusText").textContent="Ошибка загрузки. Проверь доступ к таблице и названия вкладок."; document.getElementById("orderStatus").textContent="Ошибка загрузки заказов."; } }
-function countBy(items,key){ return items.reduce((a,i)=>{ const v=i[key]||"Не указано"; a[v]=(a[v]||0)+1; return a; },{}); }
-function renderCards(){ const w=countBy(allItems,"warehouse"); totalCount.textContent=allItems.length; officeCount.textContent=w["Склад Офіс"]||0; factoryCount.textContent=w["Склад Фабрика"]||0; uaCount.textContent=w["Склад Транзит UA"]||0; plCount.textContent=w["Склад Транзит PL"]||0; soldExcludedCount.textContent=window.soldExcludedCount||soldExcludedCount; }
-function fillSelect(id,values,first){ const s=document.getElementById(id), cur=s.value; s.innerHTML=`<option value="">${first}</option>`; values.forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=v; s.appendChild(o); }); if([...s.options].some(o=>o.value===cur))s.value=cur; }
-function renderFilters(){ fillSelect("warehouseFilter",[...new Set(allItems.map(i=>i.warehouse))],"Все склады"); fillSelect("nameFilter",[...new Set(allItems.map(i=>i.name).filter(Boolean))].sort(),"Все модели"); fillSelect("memoryFilter",[...new Set(allItems.map(i=>i.memory).filter(Boolean))].sort(),"Вся память"); fillSelect("gradeFilter",[...new Set(allItems.map(i=>i.grade).filter(Boolean))].sort(),"Все Grade"); }
-function getFilteredItems(){ const q=searchInput.value.toLowerCase().trim(), w=warehouseFilter.value, n=nameFilter.value, m=memoryFilter.value, g=gradeFilter.value; return allItems.filter(i=>(!q||`${i.imei} ${i.name}`.toLowerCase().includes(q))&&(!w||i.warehouse===w)&&(!n||i.name===n)&&(!m||i.memory===m)&&(!g||i.grade===g)); }
-function renderTable(){ tableBody.innerHTML=getFilteredItems().map(i=>`<tr><td>${escapeHtml(i.imei)}</td><td>${escapeHtml(i.name)}</td><td>${escapeHtml(i.memory)}</td><td>${escapeHtml(i.grade)}</td><td><span class="badge">${escapeHtml(i.warehouse)}</span></td></tr>`).join(""); }
-function renderOrders(){ const stock=new Map(); allItems.forEach(i=>{ const key=keyNameMemory(i.name,i.memory); if(!stock.has(key))stock.set(key,{total:0,warehouses:{}}); const r=stock.get(key); r.total++; r.warehouses[i.warehouse]=(r.warehouses[i.warehouse]||0)+1; }); const rows=orderItems.map(o=>{ const s=stock.get(keyNameMemory(o.name,o.memory))||{total:0,warehouses:{}}; const buy=Math.max(o.qty-s.total,0); const wh=Object.entries(s.warehouses).sort((a,b)=>sources.findIndex(x=>x.warehouse===a[0])-sources.findIndex(x=>x.warehouse===b[0])).map(([k,v])=>`${k}: ${v}`).join("<br>")||"—"; return {...o,available:s.total,toBuy:buy,warehousesText:wh,status:buy>0?"Купить":"Есть"}; }).sort((a,b)=>b.toBuy-a.toBuy||a.name.localeCompare(b.name)); orderBody.innerHTML=rows.map(r=>`<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.memory)}</td><td>${r.qty}</td><td>${r.available}</td><td>${r.warehousesText}</td><td>${r.toBuy}</td><td><span class="${r.toBuy>0?"warn":"ok"}">${r.status}</span></td></tr>`).join(""); orderStatus.textContent=`Позиций в заказе: ${rows.reduce((s,r)=>s+r.qty,0)}. Нужно докупить: ${rows.reduce((s,r)=>s+r.toBuy,0)}.`; }
-function renderCharts(){ const wc=countBy(allItems,"warehouse"), labels=sources.map(s=>s.warehouse), data=labels.map(l=>wc[l]||0); if(warehouseChart)warehouseChart.destroy(); warehouseChart=new Chart(warehouseChart=document.getElementById("warehouseChart"),{type:"bar",data:{labels,datasets:[{label:"Количество",data}]},options:{responsive:true,plugins:{legend:{display:false}}}}); const top=Object.entries(countBy(allItems,"name")).filter(([n])=>n&&n!=="Не указано").sort((a,b)=>b[1]-a[1]).slice(0,12); if(modelChart)modelChart.destroy(); modelChart=new Chart(document.getElementById("modelChart"),{type:"bar",data:{labels:top.map(([n])=>n),datasets:[{label:"Количество",data:top.map(([,c])=>c)}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false}}}}); }
+const salesSheet={sheet:"Продажи",imeiColumnIndex:0};
+const orderSheet={sheet:"Заказ",name:0,memory:1};
+let allItems=[],orderItems=[],warehouseChart;
+function csvUrl(sheetName){return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;}
+function parseCSV(text){const rows=[];let row=[],value="",q=false;for(let i=0;i<text.length;i++){const c=text[i],n=text[i+1];if(c=='"'&&q&&n=='"'){value+='"';i++;}else if(c=='"'){q=!q;}else if(c==","&&!q){row.push(value);value="";}else if((c=="\n"||c=="\r")&&!q){if(value||row.length){row.push(value);rows.push(row);row=[];value="";}if(c=="\r"&&n=="\n")i++;}else value+=c;}if(value||row.length){row.push(value);rows.push(row);}return rows;}
+function clean(v){return String(v||"").trim();}
+function normalizeImei(v){return String(v||"").replace(/\s+/g,"").replace(/[^0-9A-Za-z]/g,"").trim();}
+function normalizeMemory(v){const raw=clean(v).toUpperCase();const tb=raw.match(/(\d+)\s*T[B]?/i);if(tb)return tb[1]+"TB";const gb=raw.match(/(\d+)\s*G[B]?/i);if(gb)return gb[1]+"GB";return raw;}
+function normalizeGrade(v){return clean(v).toUpperCase().replace(/^GRADE\s+/i,"").trim();}
+function normalizeName(v){return clean(v).replace(/\b\d+\s*G[B]?\b/gi," ").replace(/\b\d+\s*T[B]?\b/gi," ").replace(/\bGrade\s*[A-D]\+?\b/gi," ").replace(/\b[A-D]\+?\s*$/gi," ").replace(/[|•]/g," ").replace(/\s{2,}/g," ").replace(/[\s,;:/\-]+$/g,"").trim();}
+function keyNameMemory(n,m){return normalizeName(n).toLowerCase()+"||"+normalizeMemory(m).toLowerCase();}
+function escapeHtml(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");}
+async function fetchRawSheet(sheetName){const r=await fetch(csvUrl(sheetName));if(!r.ok)throw new Error("Не вдалося завантажити вкладку: "+sheetName);return parseCSV(await r.text());}
+async function fetchSoldImeis(){const rows=await fetchRawSheet(salesSheet.sheet);return new Set(rows.slice(1).map(r=>normalizeImei(r[salesSheet.imeiColumnIndex])).filter(Boolean));}
+async function fetchOrders(){const rows=await fetchRawSheet(orderSheet.sheet);const grouped=new Map();rows.slice(1).forEach(r=>{const name=normalizeName(r[orderSheet.name]);const memory=normalizeMemory(r[orderSheet.memory]);if(!name&&!memory)return;const key=keyNameMemory(name,memory);if(!grouped.has(key))grouped.set(key,{name,memory,qty:0});grouped.get(key).qty+=1;});return Array.from(grouped.values());}
+async function fetchStockSheet(source){const rows=await fetchRawSheet(source.sheet);return rows.slice(1).map(r=>({imei:normalizeImei(r[source.map.imei]),name:normalizeName(r[source.map.name]),memory:normalizeMemory(r[source.map.memory]),grade:normalizeGrade(r[source.map.grade]),warehouse:source.warehouse})).filter(i=>i.imei);}
+async function loadDashboard(){statusText.textContent="Завантаження даних...";orderStatus.textContent="Завантаження замовлень...";try{const sold=await fetchSoldImeis();orderItems=await fetchOrders();const unique=new Map();for(const source of sources){const rows=await fetchStockSheet(source);for(const item of rows){if(sold.has(item.imei))continue;if(!unique.has(item.imei))unique.set(item.imei,item);}}allItems=Array.from(unique.values());renderCards();renderFilters();renderCharts();renderTopModels();renderTable();renderOrders();statusText.textContent=`Оновлено: ${new Date().toLocaleString("uk-UA")}. У залишку: ${allItems.length}.`;}catch(e){console.error(e);statusText.textContent="Помилка завантаження. Перевір доступ до таблиці та назви вкладок.";orderStatus.textContent="Помилка завантаження замовлень.";}}
+function countBy(items,key){return items.reduce((a,i)=>{const v=i[key]||"Не вказано";a[v]=(a[v]||0)+1;return a;},{});}
+function renderCards(){const w=countBy(allItems,"warehouse");totalCount.textContent=allItems.length;officeCount.textContent=w["Склад Офіс"]||0;factoryCount.textContent=w["Склад Фабрика"]||0;uaCount.textContent=w["Склад Транзит UA"]||0;plCount.textContent=w["Склад Транзит PL"]||0;}
+function fillSelect(id,values,first){const s=document.getElementById(id),cur=s.value;s.innerHTML=`<option value="">${first}</option>`;values.forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;s.appendChild(o);});if([...s.options].some(o=>o.value===cur))s.value=cur;}
+function renderFilters(){fillSelect("warehouseFilter",[...new Set(allItems.map(i=>i.warehouse))],"Усі склади");fillSelect("nameFilter",[...new Set(allItems.map(i=>i.name).filter(Boolean))].sort(),"Усі моделі");fillSelect("memoryFilter",[...new Set(allItems.map(i=>i.memory).filter(Boolean))].sort(),"Уся памʼять");fillSelect("gradeFilter",[...new Set(allItems.map(i=>i.grade).filter(Boolean))].sort(),"Усі Grade");}
+function getFilteredItems(){const q=searchInput.value.toLowerCase().trim(),w=warehouseFilter.value,n=nameFilter.value,m=memoryFilter.value,g=gradeFilter.value;return allItems.filter(i=>(!q||`${i.imei} ${i.name}`.toLowerCase().includes(q))&&(!w||i.warehouse===w)&&(!n||i.name===n)&&(!m||i.memory===m)&&(!g||i.grade===g));}
+function renderTable(){tableBody.innerHTML=getFilteredItems().map(i=>`<tr><td>${escapeHtml(i.imei)}</td><td>${escapeHtml(i.name)}</td><td>${escapeHtml(i.memory)}</td><td>${escapeHtml(i.grade)}</td><td><span class="badge">${escapeHtml(i.warehouse)}</span></td></tr>`).join("");}
+function renderOrders(){const stock=new Map();allItems.forEach(i=>{const key=keyNameMemory(i.name,i.memory);if(!stock.has(key))stock.set(key,{total:0,warehouses:{}});const r=stock.get(key);r.total++;r.warehouses[i.warehouse]=(r.warehouses[i.warehouse]||0)+1;});const rows=orderItems.map(o=>{const s=stock.get(keyNameMemory(o.name,o.memory))||{total:0,warehouses:{}};const buy=Math.max(o.qty-s.total,0);const wh=Object.entries(s.warehouses).sort((a,b)=>sources.findIndex(x=>x.warehouse===a[0])-sources.findIndex(x=>x.warehouse===b[0])).map(([k,v])=>`${k}: ${v}`).join("<br>")||"—";return {...o,available:s.total,toBuy:buy,warehousesText:wh,status:buy>0?"Купити":"Є в наявності"};}).sort((a,b)=>b.toBuy-a.toBuy||a.name.localeCompare(b.name));orderBody.innerHTML=rows.map(r=>`<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.memory)}</td><td>${r.qty}</td><td>${r.available}</td><td>${r.warehousesText}</td><td>${r.toBuy}</td><td><span class="${r.toBuy>0?"warn":"ok"}">${r.status}</span></td></tr>`).join("");orderStatus.textContent=`Позицій у замовленні: ${rows.reduce((s,r)=>s+r.qty,0)}. Потрібно докупити: ${rows.reduce((s,r)=>s+r.toBuy,0)}.`;}
+function renderTopModels(){const grouped=new Map();allItems.forEach(i=>{const key=keyNameMemory(i.name,i.memory);if(!grouped.has(key))grouped.set(key,{name:i.name,memory:i.memory,total:0,grades:{},warehouses:{}});const r=grouped.get(key);r.total++;r.grades[i.grade||"Не вказано"]=(r.grades[i.grade||"Не вказано"]||0)+1;r.warehouses[i.warehouse]=(r.warehouses[i.warehouse]||0)+1;});const rows=Array.from(grouped.values()).sort((a,b)=>b.total-a.total).slice(0,20);topModelsBody.innerHTML=rows.map(r=>{const grades=Object.entries(r.grades).sort((a,b)=>b[1]-a[1]).map(([g,c])=>`<span class="badge">${escapeHtml(g)}: ${c}</span>`).join(" ");const wh=Object.entries(r.warehouses).sort((a,b)=>sources.findIndex(x=>x.warehouse===a[0])-sources.findIndex(x=>x.warehouse===b[0])).map(([w,c])=>`<span class="badge">${escapeHtml(w)}: ${c}</span>`).join(" ");return `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.memory)}</td><td><b>${r.total}</b></td><td>${grades}</td><td>${wh}</td></tr>`;}).join("");}
+function renderCharts(){const wc=countBy(allItems,"warehouse"),labels=sources.map(s=>s.warehouse),data=labels.map(l=>wc[l]||0);if(warehouseChart)warehouseChart.destroy();warehouseChart=new Chart(document.getElementById("warehouseChart"),{type:"bar",data:{labels,datasets:[{label:"Кількість",data}]},options:{responsive:true,plugins:{legend:{display:false}}}});}
 loadDashboard();
 </script>
 </body>
