@@ -38,7 +38,7 @@
       <h1>Дашборд Melofone</h1>
       <p class="subtitle">Єдиний дашборд для залишків, замовлень та майбутньої аналітики продажів.</p>
     </div>
-    <button class="refresh" onclick="loadDashboard()">Оновити дані</button>
+    <button class="refresh" onclick="loadAll()">Оновити дані</button>
   </section>
 
   <nav class="tabs">
@@ -107,12 +107,52 @@
 
   <section id="salesTab" class="tab-content">
     <h2 class="section-title">Продажі</h2>
-    <div class="panel">
-      <h2>Дашборд продажів</h2>
-      <div class="placeholder">
-        Тут буде аналітика продажів. Цю вкладку вже підготовлено для наступного блоку: продажі по днях, моделях, маржі, каналах та менеджерах.
+
+    <section class="cards">
+      <div class="card"><div class="card-title">Вчора</div><div class="card-value" id="salesYesterdayAmount">—</div><div class="status" id="salesYesterdayQty">—</div></div>
+      <div class="card"><div class="card-title">Останні 7 днів</div><div class="card-value" id="salesWeekAmount">—</div><div class="status" id="salesWeekQty">—</div></div>
+      <div class="card"><div class="card-title">Поточний місяць</div><div class="card-value" id="salesMonthAmount">—</div><div class="status" id="salesMonthQty">—</div></div>
+      <div class="card"><div class="card-title">Роздріб / місяць</div><div class="card-value" id="retailMonthAmount">—</div><div class="status" id="retailMonthQty">—</div></div>
+      <div class="card"><div class="card-title">Опт / місяць</div><div class="card-value" id="wholesaleMonthAmount">—</div><div class="status" id="wholesaleMonthQty">—</div></div>
+    </section>
+
+    <section class="grid">
+      <div class="panel">
+        <h2>Продажі по каналах / 30 днів</h2>
+        <canvas id="salesChannelChart"></canvas>
       </div>
-    </div>
+      <div class="panel">
+        <h2>Допродажі / місяць</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Тип</th><th>Кількість</th><th>Сума</th></tr></thead>
+            <tbody id="upsellMonthBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Періоди продажів</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Період</th>
+              <th>Продажів</th>
+              <th>Сума</th>
+              <th>Роздріб</th>
+              <th>Опт</th>
+              <th>Гарантії</th>
+              <th>Чохли</th>
+              <th>Скло</th>
+            </tr>
+          </thead>
+          <tbody id="salesPeriodsBody"></tbody>
+        </table>
+      </div>
+      <div class="status" id="salesStatus">Завантаження продажів...</div>
+    </section>
   </section>
 </main>
 <script>
@@ -125,7 +165,8 @@ const sources = [
 ];
 const salesSheet = { sheet:"Продажи", imeiColumnIndex:0 };
 const orderSheet = { sheet:"Заказ", name:0, memory:1 };
-let allItems=[], orderItems=[], soldExcludedCount=0, warehouseChart;
+let allItems=[], orderItems=[], soldExcludedCount=0, warehouseChart, salesChannelChart;
+const melofoneSalesSheet = { sheet:"Продажи Melofone" };
 
 function switchTab(tab, button){
   document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
@@ -157,7 +198,250 @@ function renderTable(){ tableBody.innerHTML=getFilteredItems().map(i=>`<tr><td>$
 function renderOrders(){ const stock=new Map(); allItems.forEach(i=>{ const key=keyNameMemory(i.name,i.memory); if(!stock.has(key))stock.set(key,{total:0,warehouses:{}}); const r=stock.get(key); r.total++; r.warehouses[i.warehouse]=(r.warehouses[i.warehouse]||0)+1; }); const rows=orderItems.map(o=>{ const s=stock.get(keyNameMemory(o.name,o.memory))||{total:0,warehouses:{}}; const buy=Math.max(o.qty-s.total,0); const wh=Object.entries(s.warehouses).sort((a,b)=>sources.findIndex(x=>x.warehouse===a[0])-sources.findIndex(x=>x.warehouse===b[0])).map(([k,v])=>`${k}: ${v}`).join("<br>")||"—"; return {...o,available:s.total,toBuy:buy,warehousesText:wh,status:buy>0?"Купити":"Є в наявності"}; }).sort((a,b)=>b.toBuy-a.toBuy||a.name.localeCompare(b.name)); orderBody.innerHTML=rows.map(r=>`<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.memory)}</td><td>${r.qty}</td><td>${r.available}</td><td>${r.warehousesText}</td><td>${r.toBuy}</td><td><span class="${r.toBuy>0?"warn":"ok"}">${r.status}</span></td></tr>`).join(""); orderStatus.textContent=`Позицій у замовленні: ${rows.reduce((s,r)=>s+r.qty,0)}. Потрібно докупити: ${rows.reduce((s,r)=>s+r.toBuy,0)}.`; }
 function renderTopModels(){ const selectedWarehouse=document.getElementById("topWarehouseFilter")?.value || ""; const sourceItems=selectedWarehouse ? allItems.filter(i=>i.warehouse===selectedWarehouse) : allItems; const grouped=new Map(); sourceItems.forEach(i=>{ const key=keyNameMemory(i.name,i.memory); if(!grouped.has(key))grouped.set(key,{name:i.name,memory:i.memory,total:0,warehouses:{}}); const r=grouped.get(key); r.total++; r.warehouses[i.warehouse]=(r.warehouses[i.warehouse]||0)+1; }); const rows=Array.from(grouped.values()).sort((a,b)=>b.total-a.total).slice(0,20); topModelsBody.innerHTML=rows.map(r=>{ const wh=Object.keys(r.warehouses).sort((a,b)=>sources.findIndex(x=>x.warehouse===a)-sources.findIndex(x=>x.warehouse===b)).map(w=>`<span class="badge">${escapeHtml(w)}</span>`).join(" "); return `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.memory)}</td><td><b>${r.total}</b></td></tr>`; }).join(""); }
 function renderCharts(){ const wc=countBy(allItems,"warehouse"), labels=sources.map(s=>s.warehouse), data=labels.map(l=>wc[l]||0); if(warehouseChart)warehouseChart.destroy(); warehouseChart=new Chart(document.getElementById("warehouseChart"),{type:"bar",data:{labels,datasets:[{label:"Кількість",data}]},options:{responsive:true,plugins:{legend:{display:false}}}}); }
-loadDashboard();
+
+function parseBoolean(v){
+  return String(v || "").trim().toLowerCase() === "true";
+}
+
+function parseNumber(v){
+  if (v === null || v === undefined) return 0;
+  const cleaned = String(v)
+    .replace(/\s/g, "")
+    .replace(",", ".")
+    .replace(/[^\d.-]/g, "");
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function parseSheetDate(v){
+  if (!v) return null;
+  const s = String(v).trim();
+
+  // dd.mm.yyyy or dd/mm/yyyy
+  let m = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/);
+  if (m) {
+    const day = Number(m[1]);
+    const month = Number(m[2]) - 1;
+    let year = Number(m[3]);
+    if (year < 100) year += 2000;
+    return new Date(year, month, day);
+  }
+
+  // yyyy-mm-dd
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function startOfDay(d){
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function addDays(d, days){
+  const x = new Date(d);
+  x.setDate(x.getDate() + days);
+  return x;
+}
+
+function currencyRateByDate(date){
+  const month = date.getMonth() + 1;
+  const rates = {
+    11: 42,
+    12: 42,
+    1: 42.9,
+    2: 43.1,
+    3: 43.9,
+    4: 43.5
+  };
+  return rates[month] || 43.5;
+}
+
+function isPhoneProduct(name){
+  return /galaxy|pixel|iphone/i.test(String(name || ""));
+}
+
+function normalizeAmountByCurrency(amount, productName, date){
+  if (amount > 0 && amount < 1000 && isPhoneProduct(productName)) {
+    return amount * currencyRateByDate(date);
+  }
+  return amount;
+}
+
+function isWholesale(channel){
+  return /опт|opt|wholesale/i.test(String(channel || ""));
+}
+
+function formatMoney(value){
+  return Math.round(value).toLocaleString("uk-UA") + " ₴";
+}
+
+function buildSalesRecord(row, sheetRowNumber){
+  const date = parseSheetDate(row[0]);        // A
+  const imei = normalizeImei(row[1]);         // B
+  const product = clean(row[2]);              // C
+  const amountD = parseNumber(row[3]);        // D
+  const warranty = parseNumber(row[5]);       // F
+  const caseAmount = parseNumber(row[6]);     // G
+  const glass = parseNumber(row[7]);          // H
+  const amountJ = parseNumber(row[9]);        // J
+  const paid = parseBoolean(row[10]);         // K
+  const channel = clean(row[11]);             // L
+
+  // До строки 1747 итоговая сумма в D, начиная с 1747 — в J.
+  const baseAmountRaw = sheetRowNumber < 1747 ? amountD : amountJ;
+  const totalAmount = normalizeAmountByCurrency(baseAmountRaw, product, date || new Date());
+
+  return {
+    date, imei, product, totalAmount, warranty, caseAmount, glass, paid, channel,
+    type: isWholesale(channel) ? "Опт" : "Роздріб"
+  };
+}
+
+async function fetchMelofoneSales(){
+  const rows = await fetchRawSheet(melofoneSalesSheet.sheet);
+
+  return rows
+    .map((row, index) => buildSalesRecord(row, index + 1))
+    .filter(sale => sale.date && sale.paid);
+}
+
+function summarizeSales(sales){
+  return sales.reduce((acc, sale) => {
+    acc.qty += 1;
+    acc.amount += sale.totalAmount;
+
+    if (sale.type === "Опт") {
+      acc.wholesaleQty += 1;
+      acc.wholesaleAmount += sale.totalAmount;
+    } else {
+      acc.retailQty += 1;
+      acc.retailAmount += sale.totalAmount;
+    }
+
+    if (sale.warranty > 0) { acc.warrantyQty += 1; acc.warrantyAmount += sale.warranty; }
+    if (sale.caseAmount > 0) { acc.caseQty += 1; acc.caseAmount += sale.caseAmount; }
+    if (sale.glass > 0) { acc.glassQty += 1; acc.glassAmount += sale.glass; }
+
+    return acc;
+  }, {
+    qty:0, amount:0,
+    retailQty:0, retailAmount:0,
+    wholesaleQty:0, wholesaleAmount:0,
+    warrantyQty:0, warrantyAmount:0,
+    caseQty:0, caseAmount:0,
+    glassQty:0, glassAmount:0
+  });
+}
+
+function filterSalesByRange(sales, start, endExclusive){
+  return sales.filter(s => s.date >= start && s.date < endExclusive);
+}
+
+function renderSalesCard(amountId, qtyId, summary){
+  document.getElementById(amountId).textContent = formatMoney(summary.amount);
+  document.getElementById(qtyId).textContent = `${summary.qty} продажів`;
+}
+
+async function loadSalesDashboard(){
+  try {
+    salesStatus.textContent = "Завантаження продажів...";
+
+    const sales = await fetchMelofoneSales();
+    const today = startOfDay(new Date());
+    const tomorrow = addDays(today, 1);
+    const yesterday = addDays(today, -1);
+    const weekStart = addDays(today, -7);
+    const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const prevMonthStart = new Date(today.getFullYear(), today.getMonth()-1, 1);
+    const prevMonthEnd = currentMonthStart;
+
+    const yesterdaySales = filterSalesByRange(sales, yesterday, today);
+    const weekSales = filterSalesByRange(sales, weekStart, tomorrow);
+    const monthSales = filterSalesByRange(sales, currentMonthStart, tomorrow);
+    const prevMonthSales = filterSalesByRange(sales, prevMonthStart, prevMonthEnd);
+
+    const sYesterday = summarizeSales(yesterdaySales);
+    const sWeek = summarizeSales(weekSales);
+    const sMonth = summarizeSales(monthSales);
+
+    renderSalesCard("salesYesterdayAmount", "salesYesterdayQty", sYesterday);
+    renderSalesCard("salesWeekAmount", "salesWeekQty", sWeek);
+    renderSalesCard("salesMonthAmount", "salesMonthQty", sMonth);
+
+    retailMonthAmount.textContent = formatMoney(sMonth.retailAmount);
+    retailMonthQty.textContent = `${sMonth.retailQty} продажів`;
+
+    wholesaleMonthAmount.textContent = formatMoney(sMonth.wholesaleAmount);
+    wholesaleMonthQty.textContent = `${sMonth.wholesaleQty} продажів`;
+
+    const periodRows = [
+      ["Вчора", sYesterday],
+      ["Останні 7 днів", sWeek],
+      ["Поточний місяць", sMonth]
+    ];
+
+    salesPeriodsBody.innerHTML = periodRows.map(([label, s]) => `
+      <tr>
+        <td><b>${label}</b></td>
+        <td>${s.qty}</td>
+        <td>${formatMoney(s.amount)}</td>
+        <td>${s.retailQty} / ${formatMoney(s.retailAmount)}</td>
+        <td>${s.wholesaleQty} / ${formatMoney(s.wholesaleAmount)}</td>
+        <td>${s.warrantyQty} / ${formatMoney(s.warrantyAmount)}</td>
+        <td>${s.caseQty} / ${formatMoney(s.caseAmount)}</td>
+        <td>${s.glassQty} / ${formatMoney(s.glassAmount)}</td>
+      </tr>
+    `).join("");
+
+    upsellMonthBody.innerHTML = `
+      <tr><td>Гарантія</td><td>${sMonth.warrantyQty}</td><td>${formatMoney(sMonth.warrantyAmount)}</td></tr>
+      <tr><td>Чохол</td><td>${sMonth.caseQty}</td><td>${formatMoney(sMonth.caseAmount)}</td></tr>
+      <tr><td>Скло</td><td>${sMonth.glassQty}</td><td>${formatMoney(sMonth.glassAmount)}</td></tr>
+    `;
+
+    renderSalesChannelChart(monthSales);
+
+    salesStatus.textContent = `Оновлено: ${new Date().toLocaleString("uk-UA")}. Враховано лише оплачені продажі.`;
+  } catch(e) {
+    console.error(e);
+    salesStatus.textContent = "Помилка завантаження продажів. Перевір назву вкладки «Продажи Melofone» та доступ до таблиці.";
+  }
+}
+
+function renderSalesChannelChart(sales){
+  const byChannel = sales.reduce((acc, sale) => {
+    const channel = sale.channel || "Не вказано";
+    acc[channel] = (acc[channel] || 0) + sale.totalAmount;
+    return acc;
+  }, {});
+
+  const entries = Object.entries(byChannel).sort((a,b) => b[1] - a[1]).slice(0, 10);
+
+  if (salesChannelChart) salesChannelChart.destroy();
+
+  salesChannelChart = new Chart(document.getElementById("salesChannelChart"), {
+    type: "bar",
+    data: {
+      labels: entries.map(([channel]) => channel),
+      datasets: [{ label: "Сума", data: entries.map(([, amount]) => Math.round(amount)) }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+async function loadAll(){
+  await loadDashboard();
+  await loadSalesDashboard();
+}
+
+loadAll();
+
 </script>
 </body>
 </html>
